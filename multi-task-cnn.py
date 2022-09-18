@@ -9,6 +9,9 @@ from keras.applications.mobilenet_v2 import MobileNetV2
 from data_generator import CustomDataGen
 from xgboost import XGBClassifier
 import csv
+from keras.optimizers import adam_v2
+from keras.metrics import Precision, Recall
+from tabulate import tabulate
 
 BATCH_SIZE = 32
 IMG_SIZE = (224, 224)
@@ -17,8 +20,6 @@ IMG_SHAPE = IMG_SIZE + (3,)
 
 image_dataset_path = '/home/dorra.gara/multi_processed_image_dataset'
 output_path = '/home/dorra.gara/training/multi-task-cnn'
-
-logs_csv = []
 
 dataset_train = pd.read_csv( os.path.join(image_dataset_path,'data_file_train.csv'),
 names=["image_path", "image_name", "frame_count", "glasses", "night", "mouth", "head","eye","drowsiness" ]
@@ -74,6 +75,8 @@ def build_model(image_shape=IMG_SIZE, data_augmentation=data_augmenter()):
     
     return model
 
+
+opt = adam_v2.Adam(learning_rate=0.0001)
 model_cnn = build_model()
 model_cnn.compile(
     loss={
@@ -83,42 +86,74 @@ model_cnn.compile(
         'head': 'categorical_crossentropy',
         'eye': 'categorical_crossentropy',
     },
-    optimizer='adam',
-    metrics= ['accuracy']
+    optimizer=opt,
+    metrics= [Precision(), Recall()]
 )
 model_cnn.summary()
 
+def get_f1(precision,recall):
+    if ((precision + recall) == 0):
+        return None
+    else:
+        return (2 * precision * recall) / (precision + recall)
+
 class Logger(tf.keras.callbacks.Callback):
     def on_epoch_end(self,epoch,logs=None):
-        glasses_accuracy = logs.get('glasses_accuracy')
-        night_accuracy = logs.get('night_accuracy')
-        mouth_accuracy = logs.get('mouth_accuracy')
-        head_accuracy = logs.get('head_accuracy')
-        eye_accuracy = logs.get('eye_accuracy')
-        val_glasses_accuracy = logs.get('val_glasses_accuracy')
-        val_night_accuracy = logs.get('val_night_accuracy')
-        val_mouth_accuracy = logs.get('val_mouth_accuracy')
-        val_head_accuracy = logs.get('val_head_accuracy')
-        val_eye_accuracy = logs.get('val_eye_accuracy')
-        print('='*30,epoch+1,'='*30)
-        print(f'glasses_accuracy:  {glasses_accuracy:.2f}')
-        print(f'night_accuracy:  {night_accuracy:.2f}')
-        print(f'mouth_accuracy:  {mouth_accuracy:.2f}')
-        print(f'head_accuracy:  {head_accuracy:.2f}')
-        print(f'eye_accuracy:  {eye_accuracy:.2f}')
-        print('_'*10)
-        print(f'val_glasses_accuracy:  {val_glasses_accuracy:.2f}')
-        print(f'val_night_accuracy:  {val_night_accuracy:.2f}')
-        print(f'val_mouth_accuracy:  {val_mouth_accuracy:.2f}')
-        print(f'val_head_accuracy:  {val_head_accuracy:.2f}')
-        print(f'val_eye_accuracy:  {val_eye_accuracy:.2f}')
-        
-        logs_csv.append(f'========================================== {epoch+1} ==========================================')
-        logs_csv.append(f'glasses_accuracy:  {glasses_accuracy:.2f} ----- val_glasses_accuracy:  {val_glasses_accuracy:.2f}')
-        logs_csv.append(f'night_accuracy:  {night_accuracy:.2f} ----- val_night_accuracy:  {val_night_accuracy:.2f}')
-        logs_csv.append(f'mouth_accuracy:  {mouth_accuracy:.2f} ----- val_mouth_accuracy:  {val_mouth_accuracy:.2f}')
-        logs_csv.append(f'head_accuracy:  {head_accuracy:.2f} ----- val_head_accuracy:  {val_head_accuracy:.2f}')
-        logs_csv.append(f'eye_accuracy:  {eye_accuracy:.2f} ----- val_eye_accuracy:  {val_eye_accuracy:.2f}')
+        glasses_loss = logs.get('glasses_loss')
+        night_loss = logs.get('night_loss')
+        mouth_loss = logs.get('mouth_loss')
+        head_loss = logs.get('head_loss')
+        eye_loss = logs.get('eye_loss')
+        val_glasses_loss = logs.get('val_glasses_loss')
+        val_night_loss = logs.get('val_night_loss')
+        val_mouth_loss = logs.get('val_mouth_loss')
+        val_head_loss = logs.get('val_head_loss')
+        val_eye_loss = logs.get('val_eye_loss')
+
+
+        glasses_precision = logs.get('glasses_precision')
+        night_precision = logs.get('night_precision')
+        mouth_precision = logs.get('mouth_precision')
+        head_precision = logs.get('head_precision')
+        eye_precision = logs.get('eye_precision')
+        val_glasses_precision = logs.get('val_glasses_precision')
+        val_night_precision = logs.get('val_night_precision')
+        val_mouth_precision = logs.get('val_mouth_precision')
+        val_head_precision = logs.get('val_head_precision')
+        val_eye_precision = logs.get('val_eye_precision')
+
+        glasses_recall = logs.get('glasses_recall')
+        night_recall = logs.get('night_recall')
+        mouth_recall = logs.get('mouth_recall')
+        head_recall = logs.get('head_recall')
+        eye_recall = logs.get('eye_recall')
+        val_glasses_recall = logs.get('val_glasses_recall')
+        val_night_recall = logs.get('val_night_recall')
+        val_mouth_recall = logs.get('val_mouth_recall')
+        val_head_recall = logs.get('val_head_recall')
+        val_eye_recall = logs.get('val_eye_recall')
+
+
+        print('='*20,epoch+1,'='*20)
+        metrics_results = [
+            ['glasses',glasses_loss, glasses_precision, glasses_recall, get_f1(glasses_precision,glasses_recall)],
+            ['night',night_loss, night_precision, night_recall, get_f1(night_precision,night_recall)],
+            ['mouth',mouth_loss, mouth_precision, mouth_recall, get_f1(mouth_precision,mouth_recall)],
+            ['head',head_loss, head_precision, head_recall, get_f1(head_precision,head_recall)],
+            ['eye',eye_loss, eye_precision, eye_recall, get_f1(eye_precision,eye_recall)],
+            ['val_glasses',val_glasses_loss, val_glasses_precision, val_glasses_recall, get_f1(val_glasses_precision,val_glasses_recall)],
+            ['val_night',val_night_loss, val_night_precision, val_night_recall, get_f1(val_night_precision,val_night_recall)],
+            ['val_mouth',val_mouth_loss, val_mouth_precision, val_mouth_recall, get_f1(val_mouth_precision,val_mouth_recall)],
+            ['val_head',val_head_loss, val_head_precision, val_head_recall, get_f1(val_head_precision,val_head_recall)],
+            ['val_eye',val_eye_loss, val_eye_precision, val_eye_recall, get_f1(val_eye_precision,val_eye_recall)],
+        ]
+        print (tabulate(metrics_results, headers=['Feature','Loss','Precision','Recall','F1-score']))
+        with open(os.path.join(output_path,"logs_cnn_f1.txt"), 'w') as f:
+            epoch_header = '==============================' + str(epoch+1) + '=============================='
+            f.write(epoch_header)
+            f.write(tabulate(metrics_results, headers=['Feature','Loss','Precision','Recall','F1-score']))
+            f.write('\n')
+        print('CNN logs saved for epoch:',epoch+1,'.')
 
 
 train_generator = CustomDataGen(dataset_train,
@@ -134,31 +169,28 @@ history = model_cnn.fit(
         train_generator,
         validation_data=val_generator,
         epochs = 10,
-        # steps_per_epoch = 30,
-        # validation_steps = 10,
-        steps_per_epoch = dataset_train.shape[0] / BATCH_SIZE,
-        validation_steps= dataset_test.shape[0] / BATCH_SIZE,
+        steps_per_epoch = 30,
+        validation_steps = 10,
+        # steps_per_epoch = dataset_train.shape[0] / BATCH_SIZE,
+        # validation_steps= dataset_test.shape[0] / BATCH_SIZE,
         callbacks = [
-            Logger(),
-            
+            Logger(),            
         ],
         verbose=False
 )
 
 
-logs_csv_path = os.path.join(output_path,"logs_cnn.txt")
+# logs_csv_path = os.path.join(output_path,"logs_cnn_f1.txt")
 # serialize model to HDF5
-model_cnn.save(os.path.join(output_path,"cnn_model.h5"))
+model_cnn.save(os.path.join(output_path,"cnn_model_f1.h5"))
 print('CNN model saved.')
 
-with open(logs_csv_path, 'w') as fout:
-    for line in logs_csv:
-        fout.write(line)
-        fout.write('\n')
-print('CNN logs saved.')
+# with open(logs_csv_path, 'w') as fout:
+#     for line in logs_csv:
+#         fout.write(line)
+#         fout.write('\n')
 
-def xgb_model(dataset_train,dataset_test):
-
+def prepare_data_xgb(dataset_train,dataset_test):
     dataset_train_tabular = dataset_train
     del dataset_train_tabular["frame_count"]
     del dataset_train_tabular["image_path"]
@@ -182,6 +214,9 @@ def xgb_model(dataset_train,dataset_test):
     X_test_encoded = X_test_encoded.values
     y_test = dataset_test_tabular.iloc[:, 5].values
 
+    return X_train_encoded, y_train, X_test_encoded,y_test
+
+def xgb_model(X_train_encoded, y_train, X_test_encoded,y_test):
 
     params = {
 		'max_depth':12,
@@ -201,7 +236,7 @@ def xgb_model(dataset_train,dataset_test):
 
     return model
 
-
-xgb_model_classifier = xgb_model(dataset_train, dataset_test)
+X_train_encoded, y_train, X_test_encoded,y_test = prepare_data_xgb(dataset_train,dataset_test)
+xgb_model_classifier = xgb_model(X_train_encoded, y_train, X_test_encoded,y_test)
 xgb_model_classifier.save_model(os.path.join(output_path,"xgb_model.json"))
 print('Xgboost model saved.')

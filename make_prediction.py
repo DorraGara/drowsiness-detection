@@ -11,7 +11,7 @@ from sklearn.preprocessing import OneHotEncoder , LabelBinarizer
 
 output_path = '/home/dorra.gara/training/multi-task-cnn'
 image_dataset_path = '/home/dorra.gara/multi_processed_image_dataset'
-model_cnn = load_model(os.path.join(output_path,"cnn_model.h5"))
+model_cnn = load_model(os.path.join(output_path,"cnn_model_f1.h5"))
 
 model_xgb = xgb.Booster()
 model_xgb.load_model(os.path.join(output_path,"xgb_model.json"))
