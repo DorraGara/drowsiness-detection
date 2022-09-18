@@ -7,6 +7,7 @@ import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import OneHotEncoder , LabelBinarizer
+from sklearn.metrics import classification_report,confusion_matrix
 
 
 output_path = '/home/dorra.gara/training/multi-task-cnn'
@@ -20,7 +21,7 @@ model_xgb.load_model(os.path.join(output_path,"xgb_model.json"))
 dataset_eval = pd.read_csv( os.path.join(image_dataset_path,'data_file_evaluate.csv'),
 names=["image_path", "image_name", "frame_count", "glasses", "night", "drowsiness" ]
 )
-# dataset_eval = dataset_eval.sample(n=300)
+#dataset_eval = dataset_eval.sample(n=300)
 data_xgb = []
 
 
@@ -89,3 +90,6 @@ predictions = model_xgb.predict(dtest)
 predictions = [round(value) for value in predictions]
 accuracy = accuracy_score(dataset_eval["drowsiness"], predictions)
 print("Accuracy: %.2f%%" % (accuracy * 100.0))
+
+print(confusion_matrix(dataset_eval["drowsiness"], predictions))
+print(classification_report(dataset_eval["drowsiness"], predictions))
